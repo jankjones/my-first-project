@@ -9,9 +9,11 @@ app.jinja_env.globals['enumerate'] = enumerate
 
 def load_data():
     if not os.path.exists(DATA_FILE):
-        return {'people': [], 'expenses': []}
-    with open(DATA_FILE) as f:
-        return json.load(f)
+        return {'people': [], 'expenses': [], 'payments': []}
+    data = json.load(open(DATA_FILE))
+    if 'payments' not in data:
+        data['payments'] = []
+    return data
 
 
 def save_data(data):
@@ -30,6 +32,10 @@ def calculate_settlements(data):
         balances[payer] += total
         for person, amount in splits.items():
             balances[person] -= amount
+
+    for payment in data.get('payments', []):
+        balances[payment['from']] += payment['amount']
+        balances[payment['to']] -= payment['amount']
 
     creditors = sorted([(p, b) for p, b in balances.items() if b > 0.01], key=lambda x: -x[1])
     debtors = sorted([(p, -b) for p, b in balances.items() if b < -0.01], key=lambda x: -x[1])
@@ -106,6 +112,20 @@ def add_expense():
             'splits': splits
         })
         save_data(data)
+    return redirect(url_for('index'))
+
+
+@app.route('/mark_paid', methods=['POST'])
+def mark_paid():
+    data = load_data()
+    from_person = request.form['from']
+    to_person = request.form['to']
+    try:
+        amount = float(request.form['amount'])
+    except ValueError:
+        return redirect(url_for('index'))
+    data['payments'].append({'from': from_person, 'to': to_person, 'amount': amount})
+    save_data(data)
     return redirect(url_for('index'))
 
 

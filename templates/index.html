@@ -64,7 +64,13 @@
             {% if settlements %}
                 {% for s in settlements %}
                 <div class="settlement">
-                    <strong>{{ s.from }}</strong> owes <strong>{{ s.to }}</strong> &nbsp; ${{ "%.2f"|format(s.amount) }}
+                    <div><strong>{{ s.from }}</strong> owes <strong>{{ s.to }}</strong> &nbsp; ${{ "%.2f"|format(s.amount) }}</div>
+                    <form method="POST" action="/mark_paid" style="margin-top:6px;">
+                        <input type="hidden" name="from" value="{{ s.from }}">
+                        <input type="hidden" name="to" value="{{ s.to }}">
+                        <input type="hidden" name="amount" value="{{ s.amount }}">
+                        <button type="submit" style="background:#2ecc71; font-size:0.8rem; padding:4px 10px;">Mark as Paid</button>
+                    </form>
                 </div>
                 {% endfor %}
             {% else %}
