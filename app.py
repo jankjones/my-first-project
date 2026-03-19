@@ -129,6 +129,38 @@ def mark_paid():
     return redirect(url_for('index'))
 
 
+@app.route('/edit_expense/<int:index>', methods=['POST'])
+def edit_expense(index):
+    data = load_data()
+    if 0 <= index < len(data['expenses']):
+        description = request.form['description'].strip()
+        date = request.form['date'].strip()
+        payer = request.form['payer']
+        try:
+            total = float(request.form['total'])
+        except ValueError:
+            return redirect(url_for('index'))
+
+        included = [p for p in data['people'] if request.form.get(f'include_{p}') == 'on']
+        if not included:
+            return redirect(url_for('index'))
+
+        split_amount = round(total / len(included), 2)
+        splits = {p: split_amount for p in included}
+        diff = round(total - sum(splits.values()), 2)
+        if diff:
+            splits[included[0]] = round(splits[included[0]] + diff, 2)
+
+        data['expenses'][index] = {
+            'description': description,
+            'date': date,
+            'payer': payer,
+            'splits': splits
+        }
+        save_data(data)
+    return redirect(url_for('index'))
+
+
 @app.route('/remove_expense/<int:index>')
 def remove_expense(index):
     data = load_data()

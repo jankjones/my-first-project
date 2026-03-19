@@ -18,7 +18,6 @@
         .remove-btn { background: #e74c3c; padding: 4px 10px; font-size: 0.8rem; }
         .remove-btn:hover { background: #c0392b; }
         ul { list-style: none; }
-        ul li { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; }
         ul li:last-child { border-bottom: none; }
         .expense-detail { font-size: 0.85rem; color: #666; margin-top: 2px; }
         .settlement { background: #eafaf1; border-left: 4px solid #2ecc71; padding: 10px; margin-bottom: 8px; border-radius: 4px; }
@@ -28,6 +27,12 @@
         .split-row input[type="checkbox"] { width: auto; margin-bottom: 0; cursor: pointer; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .empty { color: #999; font-style: italic; font-size: 0.9rem; }
+        .edit-btn { background: #f39c12; padding: 4px 10px; font-size: 0.8rem; }
+        .edit-btn:hover { background: #d68910; }
+        .edit-form { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #eee; }
+        .btn-group { display: flex; gap: 6px; }
+        ul li { display: flex; flex-direction: column; align-items: stretch; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .expense-row { display: flex; justify-content: space-between; align-items: center; }
     </style>
 </head>
 <body>
@@ -123,15 +128,56 @@
             <ul>
                 {% for i, expense in enumerate(data.expenses) %}
                 <li>
-                    <div>
-                        <strong>{{ expense.description }}</strong> {% if expense.date %}({{ expense.date }}){% endif %} — paid by {{ expense.payer }} (${{ "%.2f"|format(expense.splits.values()|sum) }})
-                        <div class="expense-detail">
-                            {% for person, amount in expense.splits.items() %}{{ person }}: ${{ "%.2f"|format(amount) }}{% if not loop.last %}, {% endif %}{% endfor %}
+                    <div class="expense-row">
+                        <div>
+                            <strong>{{ expense.description }}</strong> {% if expense.date %}({{ expense.date }}){% endif %} — paid by {{ expense.payer }} (${{ "%.2f"|format(expense.splits.values()|sum) }})
+                            <div class="expense-detail">
+                                {% for person, amount in expense.splits.items() %}{{ person }}: ${{ "%.2f"|format(amount) }}{% if not loop.last %}, {% endif %}{% endfor %}
+                            </div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="edit-btn" onclick="toggleEdit({{ i }})">Edit</button>
+                            <a href="{{ url_for('remove_expense', index=i) }}">
+                                <button class="remove-btn">Remove</button>
+                            </a>
                         </div>
                     </div>
-                    <a href="{{ url_for('remove_expense', index=i) }}">
-                        <button class="remove-btn">Remove</button>
-                    </a>
+                    <div class="edit-form" id="edit-form-{{ i }}">
+                        <form method="POST" action="/edit_expense/{{ i }}">
+                            <div class="form-row">
+                                <input type="text" name="description" value="{{ expense.description }}" required>
+                                <input type="date" name="date" value="{{ expense.date }}" required>
+                            </div>
+                            <div class="form-row">
+                                <div>
+                                    <label style="font-size:0.9rem; margin-bottom:4px; display:block;">Total cost ($)</label>
+                                    <input type="number" name="total" value="{{ "%.2f"|format(expense.splits.values()|sum) }}" min="0" step="0.01" required>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.9rem; margin-bottom:4px; display:block;">Who paid?</label>
+                                    <select name="payer" required>
+                                        {% for person in data.people %}
+                                        <option value="{{ person }}" {% if person == expense.payer %}selected{% endif %}>{{ person }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <label style="font-size:0.9rem; margin-bottom:8px; display:block;">Split between (uncheck to exclude)</label>
+                            <div class="splits-grid">
+                                {% for person in data.people %}
+                                <div class="split-row">
+                                    <input type="checkbox" name="include_{{ person }}" id="edit_include_{{ i }}_{{ person }}" {% if person in expense.splits %}checked{% endif %}>
+                                    <label for="edit_include_{{ i }}_{{ person }}">{{ person }}</label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <br>
+                            <div class="btn-group">
+                                <button type="submit">Save</button>
+                                <button type="button" onclick="toggleEdit({{ i }})" style="background:#999;">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
                 </li>
                 {% endfor %}
             </ul>
@@ -141,5 +187,11 @@
         </div>
 
     </div>
+    <script>
+        function toggleEdit(i) {
+            const form = document.getElementById('edit-form-' + i);
+            form.style.display = form.style.display === 'block' ? 'none' : 'block';
+        }
+    </script>
 </body>
 </html>
