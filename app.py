@@ -80,20 +80,28 @@ def remove_person(name):
 def add_expense():
     data = load_data()
     description = request.form['description'].strip()
+    date = request.form['date'].strip()
     payer = request.form['payer']
-    splits = {}
-    for person in data['people']:
-        val = request.form.get(f'split_{person}', '0').strip()
-        try:
-            amount = float(val)
-        except ValueError:
-            amount = 0
-        if amount > 0:
-            splits[person] = amount
+    try:
+        total = float(request.form['total'])
+    except ValueError:
+        return redirect(url_for('index'))
 
-    if description and payer and splits:
+    included = [p for p in data['people'] if request.form.get(f'include_{p}') == 'on']
+    if not included:
+        return redirect(url_for('index'))
+
+    split_amount = round(total / len(included), 2)
+    # Adjust for rounding so splits sum exactly to total
+    splits = {p: split_amount for p in included}
+    diff = round(total - sum(splits.values()), 2)
+    if diff:
+        splits[included[0]] = round(splits[included[0]] + diff, 2)
+
+    if description and payer:
         data['expenses'].append({
             'description': description,
+            'date': date,
             'payer': payer,
             'splits': splits
         })

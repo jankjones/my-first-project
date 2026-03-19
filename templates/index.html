@@ -25,7 +25,8 @@
         .splits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .split-row { display: flex; align-items: center; gap: 8px; }
         .split-row label { white-space: nowrap; min-width: 80px; }
-        .split-row input { margin-bottom: 0; }
+        .split-row input[type="checkbox"] { width: auto; margin-bottom: 0; cursor: pointer; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .empty { color: #999; font-style: italic; font-size: 0.9rem; }
     </style>
 </head>
@@ -76,19 +77,30 @@
         <div class="card full-width">
             <h2>Add Expense</h2>
             <form method="POST" action="/add_expense">
-                <input type="text" name="description" placeholder="Description (e.g. Dinner)" required>
-                <label style="font-size:0.9rem; margin-bottom:4px; display:block;">Who paid?</label>
-                <select name="payer" required>
-                    {% for person in data.people %}
-                    <option value="{{ person }}">{{ person }}</option>
-                    {% endfor %}
-                </select>
-                <label style="font-size:0.9rem; margin-bottom:8px; display:block;">Split amounts ($)</label>
+                <div class="form-row">
+                    <input type="text" name="description" placeholder="Description (e.g. Dinner)" required>
+                    <input type="date" name="date" required>
+                </div>
+                <div class="form-row">
+                    <div>
+                        <label style="font-size:0.9rem; margin-bottom:4px; display:block;">Total cost ($)</label>
+                        <input type="number" name="total" placeholder="0.00" min="0" step="0.01" required>
+                    </div>
+                    <div>
+                        <label style="font-size:0.9rem; margin-bottom:4px; display:block;">Who paid?</label>
+                        <select name="payer" required>
+                            {% for person in data.people %}
+                            <option value="{{ person }}">{{ person }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <label style="font-size:0.9rem; margin-bottom:8px; display:block;">Split between (uncheck to exclude)</label>
                 <div class="splits-grid">
                     {% for person in data.people %}
                     <div class="split-row">
-                        <label>{{ person }}</label>
-                        <input type="number" name="split_{{ person }}" placeholder="0.00" min="0" step="0.01">
+                        <input type="checkbox" name="include_{{ person }}" id="include_{{ person }}" checked>
+                        <label for="include_{{ person }}">{{ person }}</label>
                     </div>
                     {% endfor %}
                 </div>
@@ -106,7 +118,7 @@
                 {% for i, expense in enumerate(data.expenses) %}
                 <li>
                     <div>
-                        <strong>{{ expense.description }}</strong> — paid by {{ expense.payer }} (${{ "%.2f"|format(expense.splits.values()|sum) }})
+                        <strong>{{ expense.description }}</strong> {% if expense.date %}({{ expense.date }}){% endif %} — paid by {{ expense.payer }} (${{ "%.2f"|format(expense.splits.values()|sum) }})
                         <div class="expense-detail">
                             {% for person, amount in expense.splits.items() %}{{ person }}: ${{ "%.2f"|format(amount) }}{% if not loop.last %}, {% endif %}{% endfor %}
                         </div>
