@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Splitter</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #f4f6f8; color: #333; padding: 20px; }
+        h1 { text-align: center; margin-bottom: 30px; color: #2c3e50; }
+        h2 { margin-bottom: 15px; color: #2c3e50; font-size: 1.1rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; margin: 0 auto; }
+        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+        .full-width { grid-column: 1 / -1; }
+        input, select { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; }
+        button { background: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 0.95rem; }
+        button:hover { background: #2980b9; }
+        .remove-btn { background: #e74c3c; padding: 4px 10px; font-size: 0.8rem; }
+        .remove-btn:hover { background: #c0392b; }
+        ul { list-style: none; }
+        ul li { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #eee; }
+        ul li:last-child { border-bottom: none; }
+        .expense-detail { font-size: 0.85rem; color: #666; margin-top: 2px; }
+        .settlement { background: #eafaf1; border-left: 4px solid #2ecc71; padding: 10px; margin-bottom: 8px; border-radius: 4px; }
+        .splits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .split-row { display: flex; align-items: center; gap: 8px; }
+        .split-row label { white-space: nowrap; min-width: 80px; }
+        .split-row input { margin-bottom: 0; }
+        .empty { color: #999; font-style: italic; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <h1>Expense Splitter</h1>
+    <div class="grid">
+
+        <!-- People -->
+        <div class="card">
+            <h2>People</h2>
+            {% if data.people %}
+            <ul>
+                {% for person in data.people %}
+                <li>
+                    {{ person }}
+                    <a href="{{ url_for('remove_person', name=person) }}">
+                        <button class="remove-btn">Remove</button>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty">No people added yet.</p>
+            {% endif %}
+            <br>
+            <form method="POST" action="/add_person">
+                <input type="text" name="name" placeholder="Person's name" required>
+                <button type="submit">Add Person</button>
+            </form>
+        </div>
+
+        <!-- Settlements -->
+        <div class="card">
+            <h2>Who Owes Who</h2>
+            {% if settlements %}
+                {% for s in settlements %}
+                <div class="settlement">
+                    <strong>{{ s.from }}</strong> owes <strong>{{ s.to }}</strong> &nbsp; ${{ "%.2f"|format(s.amount) }}
+                </div>
+                {% endfor %}
+            {% else %}
+            <p class="empty">All settled up!</p>
+            {% endif %}
+        </div>
+
+        <!-- Add Expense -->
+        {% if data.people %}
+        <div class="card full-width">
+            <h2>Add Expense</h2>
+            <form method="POST" action="/add_expense">
+                <input type="text" name="description" placeholder="Description (e.g. Dinner)" required>
+                <label style="font-size:0.9rem; margin-bottom:4px; display:block;">Who paid?</label>
+                <select name="payer" required>
+                    {% for person in data.people %}
+                    <option value="{{ person }}">{{ person }}</option>
+                    {% endfor %}
+                </select>
+                <label style="font-size:0.9rem; margin-bottom:8px; display:block;">Split amounts ($)</label>
+                <div class="splits-grid">
+                    {% for person in data.people %}
+                    <div class="split-row">
+                        <label>{{ person }}</label>
+                        <input type="number" name="split_{{ person }}" placeholder="0.00" min="0" step="0.01">
+                    </div>
+                    {% endfor %}
+                </div>
+                <br>
+                <button type="submit">Add Expense</button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Expenses List -->
+        <div class="card full-width">
+            <h2>Expenses</h2>
+            {% if data.expenses %}
+            <ul>
+                {% for i, expense in enumerate(data.expenses) %}
+                <li>
+                    <div>
+                        <strong>{{ expense.description }}</strong> — paid by {{ expense.payer }} (${{ "%.2f"|format(expense.splits.values()|sum) }})
+                        <div class="expense-detail">
+                            {% for person, amount in expense.splits.items() %}{{ person }}: ${{ "%.2f"|format(amount) }}{% if not loop.last %}, {% endif %}{% endfor %}
+                        </div>
+                    </div>
+                    <a href="{{ url_for('remove_expense', index=i) }}">
+                        <button class="remove-btn">Remove</button>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty">No expenses added yet.</p>
+            {% endif %}
+        </div>
+
+    </div>
+</body>
+</html>
